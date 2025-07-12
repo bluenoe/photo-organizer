@@ -1,5 +1,5 @@
 # Face Recognition Photo Organizer Requirements
-# Core dependencies for face recognition functionality
+# Core dependencies for optimized version
 
 # Required for face detection and recognition
 face_recognition>=1.3.0
@@ -17,3 +17,7 @@ Pillow>=9.0.0
 # - tkinter (GUI framework)
 # - os, sys, shutil, logging, pickle (system operations)
 # - pathlib, typing, collections (utilities)
+# - threading (parallel processing)
+# - time (performance timing)
+# - concurrent.futures (ThreadPoolExecutor for parallel processing)
+# - queue (Queue for thread communication)

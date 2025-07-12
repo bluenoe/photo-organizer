@@ -1,0 +1,52 @@
+# 🐍 Virtual environment
+venv/
+ENV/
+env/
+.venv/
+
+# 🏗️ Build and distribution folders (PyInstaller, setup.py, etc.)
+build/
+dist/
+*.spec
+
+# 🧠 Cache and bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# 🧪 Logs and test outputs
+*.log
+
+# 📦 Wheel/distribution packages
+*.whl
+
+# 🧪 Unit test cache
+.pytest_cache/
+coverage.*
+htmlcov/
+
+# 💥 IDE/editor junk
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# 💻 OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# 🔒 Personal or system-specific files
+*.bak
+*.tmp
+*.swp
+*.orig
+
+# 🔐 Git folders (just in case)
+.git/
+
+# ✅ Allow these important files
+!requirements.txt
+!README.md
