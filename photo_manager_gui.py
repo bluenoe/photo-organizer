@@ -32,6 +32,16 @@ except ImportError:
     print("Warning: Pillow not installed. Image preview and EXIF data extraction will be disabled.")
     print("To install Pillow, run: pip install Pillow")
 
+# Try to import face_recognition for face detection and recognition
+try:
+    import face_recognition
+    import numpy as np
+    FACE_RECOGNITION_AVAILABLE = True
+except ImportError:
+    FACE_RECOGNITION_AVAILABLE = False
+    print("Warning: face_recognition not installed. Face-based organization will be disabled.")
+    print("To install face_recognition, run: pip install face_recognition")
+
 class PhotoManager:
     def __init__(self, root):
         self.root = root
@@ -48,6 +58,8 @@ class PhotoManager:
         # Data storage
         self.duplicate_groups = []
         self.files_to_process = []
+        self.face_encodings = {}  # Store face encodings with names
+        self.unknown_faces = []  # Store unknown face encodings with file paths
         
         self.setup_gui()
         
@@ -81,7 +93,15 @@ class PhotoManager:
         options_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=20)
         
         ttk.Checkbutton(options_frame, text="Find & Manage Duplicates", variable=self.find_duplicates).grid(row=0, column=0, sticky=tk.W)
-        ttk.Checkbutton(options_frame, text="Group by Similar Name", variable=self.group_by_name).grid(row=1, column=0, sticky=tk.W)
+        
+        # Add face recognition option
+        self.group_by_face = tk.BooleanVar(value=False)
+        face_checkbox = ttk.Checkbutton(options_frame, text="Group by Face Recognition", variable=self.group_by_face)
+        face_checkbox.grid(row=1, column=0, sticky=tk.W)
+        if not FACE_RECOGNITION_AVAILABLE:
+            face_checkbox.config(state="disabled")
+            
+        ttk.Checkbutton(options_frame, text="Group by Similar Name", variable=self.group_by_name).grid(row=2, column=0, sticky=tk.W)
         
         # Action button
         action_frame = ttk.Frame(main_frame)
@@ -283,6 +303,15 @@ class PhotoManager:
                     self.root.wait_window(self.duplicate_window)
                     # Update files list after duplicate handling
                     files_to_organize = [f for f in all_files if os.path.exists(f)]
+            
+            # Handle face recognition if enabled
+            if self.group_by_face.get() and FACE_RECOGNITION_AVAILABLE:
+                self.log_message("Starting face recognition analysis...")
+                self.analyze_faces(files_to_organize)
+                if self.unknown_faces:
+                    self.show_face_naming_dialog()
+                    # Wait for face naming dialog to close
+                    self.root.wait_window(self.face_naming_window)
                     
             # Organize remaining files
             self.organize_files(files_to_organize)
@@ -314,8 +343,18 @@ class PhotoManager:
                 
                 filename = os.path.basename(filepath)
                 
-                # Handle name grouping
-                if self.group_by_name.get():
+                # Handle face-based grouping first (higher priority)
+                if self.group_by_face.get() and FACE_RECOGNITION_AVAILABLE:
+                    person_name = self.get_person_name_for_image(filepath)
+                    if person_name:
+                        # Create subfolder for this person
+                        person_folder = os.path.join(date_folder, person_name)
+                        os.makedirs(person_folder, exist_ok=True)
+                        dest_folder = person_folder
+                    else:
+                        dest_folder = date_folder
+                # Handle name grouping if face recognition is not used
+                elif self.group_by_name.get():
                     base_name = self.extract_base_name(filename)
                     if base_name and len(base_name) > 1:
                         # Create subfolder for this base name
@@ -341,11 +380,197 @@ class PhotoManager:
         self.log_message(f"Organization complete! {organized_count} files organized.")
         messagebox.showinfo("Success", f"Organization complete!\n{organized_count} files have been organized.")
         
+    def analyze_faces(self, image_files):
+        """Analyze faces in all images and store encodings"""
+        if not FACE_RECOGNITION_AVAILABLE:
+            return
+            
+        self.unknown_faces = []
+        total_files = len(image_files)
+        
+        for i, filepath in enumerate(image_files):
+            try:
+                self.progress_var.set((i / total_files) * 100)
+                self.root.update_idletasks()
+                
+                # Load image and find faces
+                image = face_recognition.load_image_file(filepath)
+                face_locations = face_recognition.face_locations(image)
+                face_encodings = face_recognition.face_encodings(image, face_locations)
+                
+                if face_encodings:
+                    # Store the first face encoding found in the image
+                    self.unknown_faces.append({
+                        'filepath': filepath,
+                        'encoding': face_encodings[0],
+                        'location': face_locations[0]
+                    })
+                    
+            except Exception as e:
+                self.log_message(f"Error analyzing {os.path.basename(filepath)}: {str(e)}")
+                
+        self.log_message(f"Found {len(self.unknown_faces)} images with faces")
+    
+    def get_person_name_for_image(self, filepath):
+        """Get the person name for an image based on face recognition"""
+        if not FACE_RECOGNITION_AVAILABLE or not self.face_encodings:
+            return None
+            
+        try:
+            # Load image and find faces
+            image = face_recognition.load_image_file(filepath)
+            face_encodings = face_recognition.face_encodings(image)
+            
+            if not face_encodings:
+                return None
+                
+            # Compare with known faces
+            for name, known_encoding in self.face_encodings.items():
+                matches = face_recognition.compare_faces([known_encoding], face_encodings[0])
+                if matches[0]:
+                    return name
+                    
+        except Exception as e:
+            self.log_message(f"Error recognizing face in {os.path.basename(filepath)}: {str(e)}")
+            
+        return None
+    
+    def show_face_naming_dialog(self):
+        """Show dialog for naming unknown faces"""
+        self.face_naming_window = tk.Toplevel(self.root)
+        self.face_naming_window.title("Name the Faces")
+        self.face_naming_window.geometry("600x500")
+        self.face_naming_window.transient(self.root)
+        self.face_naming_window.grab_set()
+        
+        # Main frame
+        main_frame = ttk.Frame(self.face_naming_window)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Instructions
+        ttk.Label(main_frame, text="Please name the faces found in your photos:", 
+                 font=("Arial", 12, "bold")).pack(pady=(0, 10))
+        
+        # Scrollable frame for faces
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Process unique faces
+        unique_faces = self.get_unique_faces()
+        self.face_name_entries = {}
+        
+        for i, face_data in enumerate(unique_faces):
+            face_frame = ttk.LabelFrame(scrollable_frame, text=f"Face {i+1}")
+            face_frame.pack(fill=tk.X, padx=5, pady=5)
+            
+            # Image preview
+            try:
+                if PIL_AVAILABLE:
+                    image = Image.open(face_data['filepath'])
+                    # Crop face from image
+                    top, right, bottom, left = face_data['location']
+                    face_image = image.crop((left, top, right, bottom))
+                    face_image = face_image.resize((100, 100), Image.Resampling.LANCZOS)
+                    photo = ImageTk.PhotoImage(face_image)
+                    
+                    img_label = ttk.Label(face_frame, image=photo)
+                    img_label.image = photo  # Keep a reference
+                    img_label.pack(side=tk.LEFT, padx=5, pady=5)
+            except Exception as e:
+                ttk.Label(face_frame, text="Preview not available").pack(side=tk.LEFT, padx=5, pady=5)
+            
+            # Name entry
+            name_frame = ttk.Frame(face_frame)
+            name_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+            
+            ttk.Label(name_frame, text="Name:").pack(anchor=tk.W)
+            name_entry = ttk.Entry(name_frame, width=20)
+            name_entry.pack(fill=tk.X, pady=(0, 5))
+            
+            ttk.Label(name_frame, text=f"Found in: {os.path.basename(face_data['filepath'])}", 
+                     font=("Arial", 8)).pack(anchor=tk.W)
+            
+            self.face_name_entries[i] = {
+                'entry': name_entry,
+                'encoding': face_data['encoding'],
+                'files': face_data['files']
+            }
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Buttons
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        ttk.Button(button_frame, text="Save Names", command=self.save_face_names).pack(side=tk.RIGHT, padx=(5, 0))
+        ttk.Button(button_frame, text="Skip Face Recognition", command=self.skip_face_recognition).pack(side=tk.RIGHT)
+    
+    def get_unique_faces(self):
+        """Group similar faces together and return unique faces"""
+        if not self.unknown_faces:
+            return []
+            
+        unique_faces = []
+        used_indices = set()
+        
+        for i, face_data in enumerate(self.unknown_faces):
+            if i in used_indices:
+                continue
+                
+            # Find all similar faces
+            similar_files = [face_data['filepath']]
+            current_encoding = face_data['encoding']
+            
+            for j, other_face in enumerate(self.unknown_faces[i+1:], i+1):
+                if j in used_indices:
+                    continue
+                    
+                # Compare faces
+                matches = face_recognition.compare_faces([current_encoding], other_face['encoding'], tolerance=0.6)
+                if matches[0]:
+                    similar_files.append(other_face['filepath'])
+                    used_indices.add(j)
+            
+            used_indices.add(i)
+            unique_faces.append({
+                'filepath': face_data['filepath'],
+                'encoding': face_data['encoding'],
+                'location': face_data['location'],
+                'files': similar_files
+            })
+            
+        return unique_faces
+    
+    def save_face_names(self):
+        """Save the names assigned to faces"""
+        for face_id, face_data in self.face_name_entries.items():
+            name = face_data['entry'].get().strip()
+            if name:
+                # Store the face encoding with the name
+                self.face_encodings[name] = face_data['encoding']
+                self.log_message(f"Saved face: {name} ({len(face_data['files'])} photos)")
+        
+        self.face_naming_window.destroy()
+    
+    def skip_face_recognition(self):
+        """Skip face recognition and close dialog"""
+        self.face_naming_window.destroy()
+    
     def show_duplicate_manager(self):
-        """Show the duplicate management window"""
+        """Show duplicate file management window"""
         self.duplicate_window = tk.Toplevel(self.root)
         self.duplicate_window.title("Duplicate File Manager")
-        self.duplicate_window.geometry("1000x700")
+        self.duplicate_window.geometry("800x600")
         self.duplicate_window.transient(self.root)
         self.duplicate_window.grab_set()
         
