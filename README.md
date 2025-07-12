@@ -1,28 +1,24 @@
-# Photo Manager với Nhận Diện Khuôn Mặt
+# Face Recognition Photo Organizer
 
-Ứng dụng quản lý ảnh thông minh với khả năng tự động sắp xếp ảnh theo ngày tháng và nhận diện khuôn mặt.
+An advanced photo organization tool that uses face recognition to automatically sort your photo library by detecting and grouping photos of the same people. Built with Python and featuring a modern GUI interface.
 
-## Tính Năng Chính
+## Features
 
-### 1. Sắp Xếp Theo Ngày Tháng
-- Tự động tạo cấu trúc thư mục `YYYY/MM-TênTháng/`
-- Sử dụng dữ liệu EXIF hoặc ngày chỉnh sửa file
-- Xử lý xung đột tên file bằng cách thêm hậu tố
+### Core Functionality
+- **Automatic Face Detection**: Scans all images for human faces using state-of-the-art face recognition
+- **Intelligent Face Grouping**: Groups similar faces together with high accuracy
+- **Interactive Face Naming**: Shows cropped face previews for easy identification and naming
+- **Multi-Person Support**: Handles multiple faces per image - copies photos to multiple person folders
+- **Smart Organization**: Creates person-specific folders with automatic duplicate handling
+- **Performance Caching**: Caches face encodings for faster repeated runs
+- **Modern GUI**: Clean, user-friendly interface with real-time progress tracking
 
-### 2. Nhận Diện Khuôn Mặt (MỚI!)
-- Quét tự động tất cả ảnh để tìm khuôn mặt
-- Cho phép người dùng đặt tên cho từng khuôn mặt
-- Tự động nhóm ảnh theo tên người
-- Sử dụng thư viện `face_recognition` mã nguồn mở
-
-### 3. Quản Lý File Trùng Lặp
-- Phát hiện file trùng lặp dựa trên nội dung (MD5 hash)
-- Giao diện quản lý trực quan với preview ảnh
-- Các tùy chọn: giữ lại, xóa, di chuyển, đổi tên
-
-### 4. Nhóm Theo Tên File
-- Tự động nhóm ảnh có tên tương tự
-- Tạo thư mục con cho mỗi nhóm
+### Face Recognition Process
+1. **Image Scanning**: Recursively finds all JPEG and PNG images in the source folder
+2. **Face Detection**: Uses advanced algorithms to detect all faces in each image
+3. **Face Grouping**: Groups similar faces together using face distance calculations
+4. **Interactive Naming**: Displays face previews and prompts for person names
+5. **Smart Organization**: Copies images to person-named folders (supports multiple people per image)
 
 ## Cài Đặt
 

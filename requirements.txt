@@ -1,16 +1,19 @@
-# Photo Manager Dependencies
-# Core image processing library (optional but recommended)
-Pillow>=9.0.0
+# Face Recognition Photo Organizer Requirements
+# Core dependencies for face recognition functionality
 
-# Face recognition dependencies (optional but required for face-based organization)
+# Required for face detection and recognition
 face_recognition>=1.3.0
 numpy>=1.21.0
 
-# Note: face_recognition requires dlib which may need additional setup:
-# - On Windows: Install Visual Studio Build Tools or use pre-compiled wheels
-# - On macOS: Install cmake (brew install cmake)
-# - On Linux: Install cmake and build-essential
+# Required for image processing and face preview
+Pillow>=9.0.0
 
-# Note: tkinter comes built-in with Python
-# Other standard libraries used: os, shutil, hashlib, datetime, collections, re, pathlib
-# The application will work without Pillow but with limited functionality (no image preview or EXIF data)
+# Note: face_recognition requires dlib, which may need additional setup:
+# - Windows: Install Visual Studio Build Tools or use pre-compiled wheels
+# - macOS: Install cmake via Homebrew: brew install cmake
+# - Linux: Install cmake and build-essential packages
+
+# Built-in libraries used (no installation required):
+# - tkinter (GUI framework)
+# - os, sys, shutil, logging, pickle (system operations)
+# - pathlib, typing, collections (utilities)
