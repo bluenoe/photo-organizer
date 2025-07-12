@@ -1,4 +1,7 @@
-# Photo Organizer Dependencies
-# Install with: pip install -r requirements.txt
-
+# Photo Manager Dependencies
+# Core image processing library (optional but recommended)
 Pillow>=9.0.0
+
+# Note: tkinter comes built-in with Python
+# Other standard libraries used: os, shutil, hashlib, datetime, collections, re, pathlib
+# The application will work without Pillow but with limited functionality (no image preview or EXIF data)
